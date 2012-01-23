@@ -68,6 +68,9 @@ function trigger_test_trigger_info() {
       'trigger_test_triggertest' => array(
         'label' => t('Another test trigger is fired'),
       ),
+      'trigger_test_in_the_day_we_sweat_it_out_in_the_streets_of_a_runaway_american_dream' => array(
+        'label' => t('A test trigger with a name over 64 characters'),
+      ),
     ),
   );
 }

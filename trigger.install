@@ -14,7 +14,7 @@ function trigger_schema() {
     'fields' => array(
       'hook' => array(
         'type' => 'varchar',
-        'length' => 32,
+        'length' => 128,
         'not null' => TRUE,
         'default' => '',
         'description' => 'Primary Key: The name of the internal Drupal hook; for example, node_insert.',
