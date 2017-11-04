@@ -1,0 +1,10 @@
+trigger.settings:
+  type: mapping
+  label: Settings
+  mapping:
+    trigger_test_generic_any_action:
+      type: boolean
+    trigger_test_system_cron_action:
+      type: boolean
+    trigger_test_system_cron_conf_action:
+      type: integer

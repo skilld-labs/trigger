@@ -1,0 +1,3 @@
+trigger_test_generic_any_action: false
+trigger_test_system_cron_action: false
+trigger_test_system_cron_conf_action: 0

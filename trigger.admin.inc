@@ -22,13 +22,13 @@ function trigger_assign($module_to_display = NULL) {
   }
 
   $build = array();
-  $trigger_info = module_invoke_all('trigger_info');
-  drupal_alter('trigger_info', $trigger_info);
+  $trigger_info = \Drupal::moduleHandler()->invokeAll('trigger_info');
+  \Drupal::moduleHandler()->alter('trigger_info', $trigger_info);
   foreach ($trigger_info as $module => $hooks) {
     if ($module == $module_to_display) {
       foreach ($hooks as $hook => $description) {
         $form_id = 'trigger_' . $hook . '_assign_form';
-        $build[$form_id] = drupal_get_form($form_id, $module, $hook, $description['label']);
+        $build[$form_id] = \Drupal::formBuilder()->getForm($form_id, $module, $hook, $description['label']);
       }
     }
   }
@@ -89,7 +89,7 @@ function trigger_unassign_submit($form, &$form_state) {
       ->condition('aid', $aid)
       ->execute();
     $actions = actions_get_all_actions();
-    watchdog('actions', 'Action %action has been unassigned.',  array('%action' => $actions[$aid]['label']));
+    \Drupal::logger('actions')->notice('Action %action has been unassigned.', array('%action' => $actions[$aid]['label']));
     drupal_set_message(t('Action %action has been unassigned.', array('%action' => $actions[$aid]['label'])));
     $form_state['redirect'] = 'admin/structure/trigger/' . $form_state['values']['module'];
   }
@@ -154,19 +154,25 @@ function trigger_assign_form($form, $form_state, $module, $hook, $label) {
   foreach ($actions as $aid => $info) {
     // If action is defined unassign it, otherwise offer to delete all orphaned
     // actions.
-    $hash = drupal_hash_base64($aid, TRUE);
+    $hash = \Drupal\Component\Utility\Crypt::hashBase64($aid, TRUE);
     if (actions_function_lookup($hash)) {
-      $form[$hook]['assigned']['#value'][$aid] = array(
-        'label' => $info['label'],
-        'link' => l(t('unassign'), "admin/structure/trigger/unassign/$module/$hook/$hash"),
-      );
+      // @FIXME
+// l() expects a Url object, created from a route name or external URI.
+// $form[$hook]['assigned']['#value'][$aid] = array(
+//         'label' => $info['label'],
+//         'link' => l(t('unassign'), "admin/structure/trigger/unassign/$module/$hook/$hash"),
+//       );
+
     }
     else {
       // Link to system_actions_remove_orphans() to do the clean up.
-      $form[$hook]['assigned']['#value'][$aid] = array(
-        'label' => $info['label'],
-        'link' => l(t('Remove orphaned actions'), "admin/config/system/actions/orphan"),
-      );
+      // @FIXME
+// l() expects a Url object, created from a route name or external URI.
+// $form[$hook]['assigned']['#value'][$aid] = array(
+//         'label' => $info['label'],
+//         'link' => l(t('Remove orphaned actions'), "admin/config/system/actions/orphan"),
+//       );
+
     }
   }
 
@@ -189,9 +195,12 @@ function trigger_assign_form($form, $form_state, $module, $hook, $label) {
     );
   }
   else {
-    $form[$hook]['none'] = array(
-      '#markup' => t('No actions available for this trigger. <a href="@link">Add action</a>.', array('@link' => url('admin/config/system/actions/manage')))
-    );
+    // @FIXME
+// url() expects a route name or an external URI.
+// $form[$hook]['none'] = array(
+//       '#markup' => t('No actions available for this trigger. <a href="@link">Add action</a>.', array('@link' => url('admin/config/system/actions/manage')))
+//     );
+
   }
   return $form;
 }
@@ -292,14 +301,23 @@ function theme_trigger_display($variables) {
     $rows = array();
     foreach ($element['assigned']['#value'] as $aid => $info) {
       $rows[] = array(
-        check_plain($info['label']),
+        \Drupal\Component\Utility\Html::escape($info['label']),
         $info['link']
       );
     }
   }
 
   if (count($rows)) {
-    $output = theme('table', array('header' => $header, 'rows' => $rows)) . drupal_render_children($element);
+    // @FIXME
+// theme() has been renamed to _theme() and should NEVER be called directly.
+// Calling _theme() directly can alter the expected output and potentially
+// introduce security issues (see https://www.drupal.org/node/2195739). You
+// should use renderable arrays instead.
+// 
+// 
+// @see https://www.drupal.org/node/2195739
+// $output = theme('table', array('header' => $header, 'rows' => $rows)) . drupal_render_children($element);
+
   }
   else {
     $output = drupal_render_children($element);

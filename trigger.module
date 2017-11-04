@@ -13,12 +13,18 @@ function trigger_help($path, $arg) {
   // Generate help text for admin/structure/trigger/(module) tabs.
   $matches = array();
   if (preg_match('|^admin/structure/trigger/(.*)$|', $path, $matches)) {
-    $explanation = '<p>' . t('Triggers are events on your site, such as new content being added or a user logging in. The Trigger module associates these triggers with actions (functional tasks), such as unpublishing content containing certain keywords or e-mailing an administrator. The <a href="@url">Actions settings page</a> contains a list of existing actions and provides the ability to create and configure advanced actions (actions requiring configuration, such as an e-mail address or a list of banned words).', array('@url' => url('admin/config/system/actions'))) . '</p>';
+    // @FIXME
+// url() expects a route name or an external URI.
+// $explanation = '<p>' . t('Triggers are events on your site, such as new content being added or a user logging in. The Trigger module associates these triggers with actions (functional tasks), such as unpublishing content containing certain keywords or e-mailing an administrator. The <a href="@url">Actions settings page</a> contains a list of existing actions and provides the ability to create and configure advanced actions (actions requiring configuration, such as an e-mail address or a list of banned words).', array('@url' => url('admin/config/system/actions'))) . '</p>';
+
 
     $module = $matches[1];
     $trigger_info = _trigger_tab_information();
     if (!empty($trigger_info[$module])) {
-      $explanation .= '<p>' . t('There is a tab on this page for each module that defines triggers. On this tab you can assign actions to run when triggers from the <a href="@module-help">@module-name module</a> happen.', array('@module-help' => url('admin/help/' . $module), '@module-name' => $trigger_info[$module])) . '</p>';
+      // @FIXME
+// url() expects a route name or an external URI.
+// $explanation .= '<p>' . t('There is a tab on this page for each module that defines triggers. On this tab you can assign actions to run when triggers from the <a href="@module-help">@module-name module</a> happen.', array('@module-help' => url('admin/help/' . $module), '@module-name' => $trigger_info[$module])) . '</p>';
+
     }
 
     return $explanation;
@@ -31,15 +37,26 @@ function trigger_help($path, $arg) {
     $output .= '<h3>' . t('Uses') . '</h3>';
     $output .= '<dl>';
     $output .= '<dt>' . t('Configuring triggers and actions') . '</dt>';
-    $output .= '<dd>' . t('The combination of actions and triggers can perform many useful tasks, such as e-mailing an administrator if a user account is deleted, or automatically unpublishing comments that contain certain words. To set up a trigger/action combination, first visit the <a href="@actions-page">Actions configuration page</a>, where you can either verify that the action you want is already listed, or create a new <em>advanced</em> action. You will need to set up an advanced action if there are configuration options in your trigger/action combination, such as specifying an e-mail address or a list of banned words. After configuring or verifying your action, visit the <a href="@triggers-page">Triggers configuration page</a> and choose the appropriate tab (Comment, Taxonomy, etc.), where you can assign the action to run when the trigger event occurs.', array('@triggers-page' => url('admin/structure/trigger'), '@actions-page' => url('admin/config/system/actions'))) . '</dd>';
+    // @FIXME
+// url() expects a route name or an external URI.
+// $output .= '<dd>' . t('The combination of actions and triggers can perform many useful tasks, such as e-mailing an administrator if a user account is deleted, or automatically unpublishing comments that contain certain words. To set up a trigger/action combination, first visit the <a href="@actions-page">Actions configuration page</a>, where you can either verify that the action you want is already listed, or create a new <em>advanced</em> action. You will need to set up an advanced action if there are configuration options in your trigger/action combination, such as specifying an e-mail address or a list of banned words. After configuring or verifying your action, visit the <a href="@triggers-page">Triggers configuration page</a> and choose the appropriate tab (Comment, Taxonomy, etc.), where you can assign the action to run when the trigger event occurs.', array('@triggers-page' => url('admin/structure/trigger'), '@actions-page' => url('admin/config/system/actions'))) . '</dd>';
+
     $output .= '</dl>';
     return $output;
   }
 }
 
 /**
- * Implements hook_menu().
+ * @FIXME
+ * This implementation of hook_menu() cannot be automatically converted because
+ * it contains logic (i.e., branching statements, function calls, object
+ * instantiation, etc.) You will need to convert it manually. Sorry!
+ *
+ * For more information on how to convert hook_menu() to Drupal 8's new routing
+ * and linking systems, see https://api.drupal.org/api/drupal/core%21includes%21menu.inc/group/menu/8
  */
+
+
 function trigger_menu() {
   $items['admin/structure/trigger'] = array(
     'title' => 'Triggers',
@@ -215,14 +232,14 @@ function trigger_forms() {
  * @return
  *   The object expected by the action that is about to be called.
  */
-function _trigger_normalize_node_context($type, $node) {
+function _trigger_normalize_node_context($type, \Drupal\node\NodeInterface $node) {
   // Note that comment-type actions are not supported in node contexts,
   // because we wouldn't know which comment to choose.
   switch ($type) {
     // An action that works on users is being called in a node context.
     // Load the user object of the node's author.
     case 'user':
-      return user_load($node->uid);
+      return \Drupal::entityManager()->getStorage('user')->load($node->getOwnerId());
   }
 }
 
@@ -238,7 +255,7 @@ function _trigger_normalize_node_context($type, $node) {
  * @param $a4
  *   Additional argument to action function.
  */
-function _trigger_node($node, $hook, $a3 = NULL, $a4 = NULL) {
+function _trigger_node(\Drupal\node\NodeInterface $node, $hook, $a3 = NULL, $a4 = NULL) {
   // Keep objects for reuse so that changes actions make to objects can persist.
   static $objects;
   // Prevent recursion by tracking which operations have already been called.
@@ -283,28 +300,28 @@ function _trigger_node($node, $hook, $a3 = NULL, $a4 = NULL) {
 /**
  * Implements hook_node_view().
  */
-function trigger_node_view($node, $view_mode) {
+function trigger_node_view(array &$build, \Drupal\node\NodeInterface $node, $view_mode) {
   _trigger_node($node, 'node_view', $view_mode);
 }
 
 /**
  * Implements hook_node_update().
  */
-function trigger_node_update($node) {
+function trigger_node_update(\Drupal\node\NodeInterface $node) {
   _trigger_node($node, 'node_update');
 }
 
 /**
  * Implements hook_node_presave().
  */
-function trigger_node_presave($node) {
+function trigger_node_presave(\Drupal\node\NodeInterface $node) {
   _trigger_node($node, 'node_presave');
 }
 
 /**
  * Implements hook_node_insert().
  */
-function trigger_node_insert($node) {
+function trigger_node_insert(\Drupal\node\NodeInterface $node) {
   _trigger_node($node, 'node_insert');
 }
 
@@ -332,50 +349,50 @@ function trigger_node_predelete($node) {
  * @return
  *   The object expected by the action that is about to be called.
  */
-function _trigger_normalize_comment_context($type, $comment) {
+function _trigger_normalize_comment_context($type, \Drupal\comment\CommentInterface $comment) {
   switch ($type) {
     // An action that works with nodes is being called in a comment context.
     case 'node':
-      return node_load(is_array($comment) ? $comment['nid'] : $comment->nid);
+      return \Drupal::entityManager()->getStorage('node')->load(is_array($comment) ? $comment['nid'] : $comment->nid);
 
     // An action that works on users is being called in a comment context.
     case 'user':
-      return user_load(is_array($comment) ? $comment['uid'] : $comment->uid);
+      return \Drupal::entityManager()->getStorage('user')->load(is_array($comment) ? $comment['uid'] : $comment->uid);
   }
 }
 
 /**
  * Implements hook_comment_presave().
  */
-function trigger_comment_presave($comment) {
+function trigger_comment_presave(\Drupal\comment\CommentInterface $comment) {
   _trigger_comment($comment, 'comment_presave');
 }
 
 /**
  * Implements hook_comment_insert().
  */
-function trigger_comment_insert($comment) {
+function trigger_comment_insert(\Drupal\comment\CommentInterface $comment) {
   _trigger_comment($comment, 'comment_insert');
 }
 
 /**
  * Implements hook_comment_update().
  */
-function trigger_comment_update($comment) {
+function trigger_comment_update(\Drupal\comment\CommentInterface $comment) {
   _trigger_comment($comment, 'comment_update');
 }
 
 /**
  * Implements hook_comment_delete().
  */
-function trigger_comment_delete($comment) {
+function trigger_comment_delete(\Drupal\comment\CommentInterface $comment) {
   _trigger_comment($comment, 'comment_delete');
 }
 
 /**
  * Implements hook_comment_view().
  */
-function trigger_comment_view($comment) {
+function trigger_comment_view(array &$build, \Drupal\comment\CommentInterface $comment) {
   _trigger_comment($comment, 'comment_view');
 }
 
@@ -387,7 +404,7 @@ function trigger_comment_view($comment) {
  * @param $op
  *   Operation to trigger.
  */
-function _trigger_comment($a1, $hook) {
+function _trigger_comment(\Drupal\comment\CommentInterface $a1, $hook) {
   // Keep objects for reuse so that changes actions make to objects can persist.
   static $objects;
   $aids = trigger_get_assigned_actions($hook);
@@ -445,7 +462,7 @@ function trigger_cron() {
  * @return
  *   The object expected by the action that is about to be called.
  */
-function _trigger_normalize_user_context($type, $account) {
+function _trigger_normalize_user_context($type, \Drupal\user\UserInterface $account) {
   // Note that comment-type actions are not supported in user contexts,
   // because we wouldn't know which comment to choose.
   switch ($type) {
@@ -454,7 +471,7 @@ function _trigger_normalize_user_context($type, $account) {
     case 'node':
       // If we are viewing an individual node, return the node.
       if (arg(0) == 'node' && is_numeric(arg(1)) && arg(2) == NULL) {
-        return node_load(array('nid' => arg(1)));
+        return \Drupal::entityManager()->getStorage('node')->load(array('nid' => arg(1)));
       }
       break;
   }
@@ -462,30 +479,50 @@ function _trigger_normalize_user_context($type, $account) {
 
 /**
  * Implements hook_user_login().
+ *
+ * @FIXME
+ * The $edit parameter is gone in Drupal 8. It has been left here in order to
+ * prevent 'undefined variable' errors, but it will never actually be passed to
+ * this hook. You'll need to modify this function and remove every reference to it.
  */
-function trigger_user_login(&$edit, $account) {
+
+function trigger_user_login(\Drupal\user\UserInterface $account, $edit = []) {
   _trigger_user('user_login', $edit, $account);
 }
 
 /**
  * Implements hook_user_logout().
  */
-function trigger_user_logout($account) {
+function trigger_user_logout(\Drupal\user\UserInterface $account) {
   $edit = array();
   _trigger_user('user_logout', $edit, $account);
 }
 
 /**
  * Implements hook_user_insert().
+ *
+ * @FIXME
+ * The $edit and $category parameters are gone in Drupal 8. They have been left
+ * here in order to prevent 'undefined variable' errors, but they will never
+ * actually be passed to this hook. You'll need to modify this function and
+ * remove every reference to them.
  */
-function trigger_user_insert(&$edit, $account) {
+
+function trigger_user_insert(\Drupal\user\UserInterface $account, $edit = NULL) {
   _trigger_user('user_insert', $edit, $account);
 }
 
 /**
  * Implements hook_user_update().
+ *
+ * @FIXME
+ * The $edit and $category parameters are gone in Drupal 8. They have been left
+ * here in order to prevent 'undefined variable' errors, but they will never
+ * actually be passed to this hook. You'll need to modify this function and
+ * remove every reference to them.
  */
-function trigger_user_update(&$edit, $account) {
+
+function trigger_user_update(\Drupal\user\UserInterface $account, $edit = NULL) {
   _trigger_user('user_update', $edit, $account);
 }
 
@@ -511,7 +548,7 @@ function trigger_user_predelete($account) {
 /**
  * Implements hook_user_view().
  */
-function trigger_user_view($account) {
+function trigger_user_view(array &$build, \Drupal\user\UserInterface $account) {
   $edit = NULL;
   _trigger_user('user_view', $edit, $account);
 }
@@ -519,7 +556,7 @@ function trigger_user_view($account) {
 /**
  * Calls action functions for user triggers.
  */
-function _trigger_user($hook, &$edit, $account, $method = NULL) {
+function _trigger_user($hook, &$edit, \Drupal\user\UserInterface $account, $method = NULL) {
   // Keep objects for reuse so that changes actions make to objects can persist.
   static $objects;
   $aids = trigger_get_assigned_actions($hook);
@@ -565,21 +602,21 @@ function _trigger_taxonomy($hook, $array) {
 /**
  * Implements hook_taxonomy_term_insert().
  */
-function trigger_taxonomy_term_insert($term) {
+function trigger_taxonomy_term_insert(\Drupal\taxonomy\TermInterface $term) {
   _trigger_taxonomy('taxonomy_term_insert', (array) $term);
 }
 
 /**
  * Implements hook_taxonomy_term_update().
  */
-function trigger_taxonomy_term_update($term) {
+function trigger_taxonomy_term_update(\Drupal\taxonomy\TermInterface $term) {
   _trigger_taxonomy('taxonomy_term_update', (array) $term);
 }
 
 /**
  * Implements hook_taxonomy_term_delete().
  */
-function trigger_taxonomy_term_delete($term) {
+function trigger_taxonomy_term_delete(\Drupal\taxonomy\TermInterface $term) {
   _trigger_taxonomy('taxonomy_term_delete', (array) $term);
 }
 
@@ -601,8 +638,8 @@ function _trigger_get_all_info() {
   $triggers = &drupal_static(__FUNCTION__);
 
   if (!isset($triggers)) {
-    $triggers = module_invoke_all('trigger_info');
-    drupal_alter('trigger_info', $triggers);
+    $triggers = \Drupal::moduleHandler()->invokeAll('trigger_info');
+    \Drupal::moduleHandler()->alter('trigger_info', $triggers);
   }
 
   return $triggers;

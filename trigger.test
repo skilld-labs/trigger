@@ -59,7 +59,7 @@ class TriggerContentTestCase extends TriggerWebTestCase {
    * These are in one function to assure they happen in the right order.
    */
   function testActionsContent() {
-    global $user;
+    $user = \Drupal::currentUser();
     $content_actions = array('node_publish_action', 'node_unpublish_action', 'node_make_sticky_action', 'node_make_unsticky_action', 'node_promote_action', 'node_unpromote_action');
 
     $test_user = $this->drupalCreateUser(array('administer actions'));
@@ -76,7 +76,7 @@ class TriggerContentTestCase extends TriggerWebTestCase {
       // Create an unpublished node.
       $this->drupalLogin($web_user);
       $edit = array();
-      $langcode = LANGUAGE_NONE;
+      $langcode = \Drupal\Core\Language\Language::LANGCODE_NOT_SPECIFIED;
       $edit["title"] = '!SimpleTest test node! ' . $this->randomName(10);
       $edit["body[$langcode][0][value]"] = '!SimpleTest test body! ' . $this->randomName(32) . ' ' . $this->randomName(32);
       $edit[$info['property']] = !$info['expected'];
@@ -131,7 +131,7 @@ class TriggerContentTestCase extends TriggerWebTestCase {
       'nodes[2]' => TRUE,
     );
     $this->drupalPost('admin/content', $edit, t('Update'));
-    $count = variable_get('trigger_test_generic_any_action', 0);
+    $count = \Drupal::config('trigger.settings')->get('trigger_test_generic_any_action');
     $this->assertTrue($count == 2, t('Action was triggered 2 times. Actual: %count', array('%count' => $count)));
   }
 
@@ -241,11 +241,11 @@ class TriggerCronTestCase extends TriggerWebTestCase {
     $this->cronRun();
 
     // Make sure the non-configurable action has fired.
-    $action_run = variable_get('trigger_test_system_cron_action', FALSE);
+    $action_run = \Drupal::config('trigger.settings')->get('trigger_test_system_cron_action');
     $this->assertTrue($action_run, t('Check that the cron run triggered the test action.'));
 
     // Make sure that both configurable actions have fired.
-    $action_run = variable_get('trigger_test_system_cron_conf_action', 0) == 2;
+    $action_run = \Drupal::config('trigger.settings')->get('trigger_test_system_cron_conf_action') == 2;
     $this->assertTrue($action_run, t('Check that the cron run triggered both complex actions.'));
   }
 }
@@ -291,17 +291,20 @@ class TriggerActionTestCase extends TriggerWebTestCase {
   function generateTokenExpandedComparison($trigger, $account) {
     // Note that user:last-login was omitted because it changes and can't
     // be properly verified.
-    $message = t('Action was triggered by trigger @trigger user:name=@username user:uid=@uid user:mail=@mail user:url=@user_url user:edit-url=@user_edit_url user:created=@user_created',
-       array(
-        '@trigger' => $trigger,
-        '@username' => $account->name,
-        '@uid' => !empty($account->uid) ? $account->uid : t('not yet assigned'),
-        '@mail' => $account->mail,
-        '@user_url' => !empty($account->uid) ? url("user/$account->uid", array('absolute' => TRUE)) : t('not yet assigned'),
-        '@user_edit_url' => !empty($account->uid) ? url("user/$account->uid/edit", array('absolute' => TRUE)) : t('not yet assigned'),
-        '@user_created' => isset($account->created) ? format_date($account->created, 'medium') : t('not yet created'),
-        )
-      );
+    // @FIXME
+// url() expects a route name or an external URI.
+// $message = t('Action was triggered by trigger @trigger user:name=@username user:uid=@uid user:mail=@mail user:url=@user_url user:edit-url=@user_edit_url user:created=@user_created',
+//        array(
+//         '@trigger' => $trigger,
+//         '@username' => $account->name,
+//         '@uid' => !empty($account->uid) ? $account->uid : t('not yet assigned'),
+//         '@mail' => $account->mail,
+//         '@user_url' => !empty($account->uid) ? url("user/$account->uid", array('absolute' => TRUE)) : t('not yet assigned'),
+//         '@user_edit_url' => !empty($account->uid) ? url("user/$account->uid/edit", array('absolute' => TRUE)) : t('not yet assigned'),
+//         '@user_created' => isset($account->created) ? format_date($account->created, 'medium') : t('not yet created'),
+//         )
+//       );
+
       return trim($message);
   }
 
@@ -471,7 +474,12 @@ class TriggerUserTokenTestCase extends TriggerActionTestCase {
 
     $this->drupalLogin($new_user);
     $user_to_delete = $this->drupalCreateUser(array('access content'));
-    variable_set('user_cancel_method', 'user_cancel_delete');
+    // @FIXME
+// // @FIXME
+// // This looks like another module's variable. You'll need to rewrite this call
+// // to ensure that it uses the correct configuration object.
+// variable_set('user_cancel_method', 'user_cancel_delete');
+
 
     $this->drupalPost("user/{$user_to_delete->uid}/cancel", array(), t('Cancel account'));
     $this->assertSystemMessageAndEmailTokenReplacement('user_delete', $user_to_delete);
@@ -514,19 +522,26 @@ class TriggerUserActionTestCase extends TriggerActionTestCase {
     $node = $this->drupalCreateNode(array('type' => 'article'));
     $this->drupalPost("node/{$node->nid}", array('comment_body[und][0][value]' => t("my comment"), 'subject' => t("my comment subject")), t('Save'));
     // Posting a comment should have blocked this user.
-    $account = user_load($test_user->uid, TRUE);
+    $account = // @FIXME
+// To reset the user cache, use EntityStorageInterface::resetCache().
+\Drupal::entityManager()->getStorage('user')->load($test_user->uid);
     $this->assertTrue($account->status == 0, t('Account is blocked'));
     $comment_author_uid = $account->uid;
     // Now rehabilitate the comment author so it can be be blocked again when
     // the comment is updated.
-    user_save($account, array('status' => TRUE));
+    // @FIXME
+// user_save() is now a method of the user entity.
+// user_save($account, array('status' => TRUE));
+
 
     $test_user = $this->drupalCreateUser(array('administer actions', 'create article content', 'access comments', 'administer comments', 'skip comment approval', 'edit own comments'));
     $this->drupalLogin($test_user);
 
     // Our original comment will have been comment 1.
     $this->drupalPost("comment/1/edit", array('comment_body[und][0][value]' => t("my comment, updated"), 'subject' => t("my comment subject")), t('Save'));
-    $comment_author_account = user_load($comment_author_uid, TRUE);
+    $comment_author_account = // @FIXME
+// To reset the user cache, use EntityStorageInterface::resetCache().
+\Drupal::entityManager()->getStorage('user')->load($comment_author_uid);
     $this->assertTrue($comment_author_account->status == 0, t('Comment author account (uid=@uid) is blocked after update to comment', array('@uid' => $comment_author_uid)));
 
     // Verify that the comment was updated.
@@ -571,7 +586,12 @@ class TriggerOtherTestCase extends TriggerWebTestCase {
     $this->drupalPost('admin/structure/trigger/user', $edit, t('Assign'), array(), array(), 'trigger-user-insert-assign-form');
 
     // Set action variable to FALSE.
-    variable_set($action_id, FALSE);
+    // @FIXME
+// // @FIXME
+// // The correct configuration object could not be determined. You'll need to
+// // rewrite this call manually.
+// variable_set($action_id, FALSE);
+
 
     // Create an unblocked user
     $web_user = $this->drupalCreateUser(array('administer users'));
@@ -587,10 +607,20 @@ class TriggerOtherTestCase extends TriggerWebTestCase {
     $this->drupalPost('admin/people/create', $edit, t('Create new account'));
 
     // Verify that the action variable has been set.
-    $this->assertTrue(variable_get($action_id, FALSE), t('Check that creating a user triggered the test action.'));
+    // @FIXME
+// // @FIXME
+// // The correct configuration object could not be determined. You'll need to
+// // rewrite this call manually.
+// $this->assertTrue(variable_get($action_id, FALSE), t('Check that creating a user triggered the test action.'));
+
 
     // Reset the action variable.
-    variable_set($action_id, FALSE);
+    // @FIXME
+// // @FIXME
+// // The correct configuration object could not be determined. You'll need to
+// // rewrite this call manually.
+// variable_set($action_id, FALSE);
+
 
     $this->drupalLogin($test_user);
     // Assign a configurable action 'System message' to the user_login trigger.
@@ -628,7 +658,12 @@ class TriggerOtherTestCase extends TriggerWebTestCase {
     $this->drupalPost('admin/structure/trigger/comment', $edit, t('Assign'), array(), array(), 'trigger-comment-insert-assign-form');
 
     // Set action variable to FALSE.
-    variable_set($action_id, FALSE);
+    // @FIXME
+// // @FIXME
+// // The correct configuration object could not be determined. You'll need to
+// // rewrite this call manually.
+// variable_set($action_id, FALSE);
+
 
     // Create a node and add a comment to it.
     $web_user = $this->drupalCreateUser(array('create article content', 'access content', 'skip comment approval', 'post comments'));
@@ -636,12 +671,17 @@ class TriggerOtherTestCase extends TriggerWebTestCase {
     $node = $this->drupalCreateNode(array('type' => 'article', 'promote' => 1));
     $edit = array();
     $edit['subject'] = $this->randomName(10);
-    $edit['comment_body[' . LANGUAGE_NONE . '][0][value]'] = $this->randomName(10) . ' ' . $this->randomName(10);
+    $edit['comment_body[' . \Drupal\Core\Language\Language::LANGCODE_NOT_SPECIFIED . '][0][value]'] = $this->randomName(10) . ' ' . $this->randomName(10);
     $this->drupalGet('comment/reply/' . $node->nid);
     $this->drupalPost(NULL, $edit, t('Save'));
 
     // Verify that the action variable has been set.
-    $this->assertTrue(variable_get($action_id, FALSE), t('Check that creating a comment triggered the action.'));
+    // @FIXME
+// // @FIXME
+// // The correct configuration object could not be determined. You'll need to
+// // rewrite this call manually.
+// $this->assertTrue(variable_get($action_id, FALSE), t('Check that creating a comment triggered the action.'));
+
   }
 
   /**
@@ -657,7 +697,12 @@ class TriggerOtherTestCase extends TriggerWebTestCase {
     $this->drupalPost('admin/structure/trigger/taxonomy', $edit, t('Assign'), array(), array(), 'trigger-taxonomy-term-insert-assign-form');
 
     // Set action variable to FALSE.
-    variable_set($action_id, FALSE);
+    // @FIXME
+// // @FIXME
+// // The correct configuration object could not be determined. You'll need to
+// // rewrite this call manually.
+// variable_set($action_id, FALSE);
+
 
     // Create a taxonomy vocabulary and add a term to it.
 
@@ -674,10 +719,15 @@ class TriggerOtherTestCase extends TriggerWebTestCase {
     $term = new stdClass();
     $term->name = $this->randomName();
     $term->vid = $vocabulary->vid;
-    taxonomy_term_save($term);
+    $term->save();
 
     // Verify that the action variable has been set.
-    $this->assertTrue(variable_get($action_id, FALSE), t('Check that creating a taxonomy term triggered the action.'));
+    // @FIXME
+// // @FIXME
+// // The correct configuration object could not be determined. You'll need to
+// // rewrite this call manually.
+// $this->assertTrue(variable_get($action_id, FALSE), t('Check that creating a taxonomy term triggered the action.'));
+
   }
 
 }
@@ -717,14 +767,14 @@ class TriggerOrphanedActionsTestCase extends DrupalWebTestCase {
     $web_user = $this->drupalCreateUser(array('create page content', 'edit own page content', 'access content', 'administer nodes'));
     $this->drupalLogin($web_user);
     $edit = array();
-    $langcode = LANGUAGE_NONE;
+    $langcode = \Drupal\Core\Language\Language::LANGCODE_NOT_SPECIFIED;
     $edit["title"] = '!SimpleTest test node! ' . $this->randomName(10);
     $edit["body[$langcode][0][value]"] = '!SimpleTest test body! ' . $this->randomName(32) . ' ' . $this->randomName(32);
     $this->drupalPost('node/add/page', $edit, t('Save'));
     $this->assertRaw(t('!post %title has been created.', array('!post' => 'Basic page', '%title' => $edit["title"])), t('Make sure the Basic page has actually been created'));
 
     // Action should have been fired.
-    $this->assertTrue(variable_get('trigger_test_generic_any_action', FALSE), t('Trigger test action successfully fired.'));
+    $this->assertTrue(\Drupal::config('trigger.settings')->get('trigger_test_generic_any_action'), t('Trigger test action successfully fired.'));
 
     // Disable the module that provides the action and make sure the trigger
     // doesn't white screen.

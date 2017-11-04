@@ -19,7 +19,7 @@
  * out which actions the user has associated with your trigger, and then calling
  * actions_do() to fire off the actions.
  *
- * @return
+ * @return array
  *   A nested associative array.
  *   - The outermost key is the name of the module that is defining the triggers.
  *     This will be used to create a local task (tab) in the trigger module's

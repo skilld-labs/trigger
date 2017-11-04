@@ -1,0 +1,5 @@
+name: Trigger
+description: 'Enables actions to be fired on certain system events, such as when new content is created.'
+package: Trigger
+core: 8.x
+type: module

@@ -49,5 +49,5 @@ function trigger_schema() {
  */
 function trigger_install() {
   // Do initial synchronization of actions in code and the database.
-  actions_synchronize();
+  action_synchronize();
 }
