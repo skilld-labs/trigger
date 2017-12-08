@@ -43,11 +43,3 @@ function trigger_schema() {
   );
   return $schema;
 }
-
-/**
- * Implements hook_install().
- */
-function trigger_install() {
-  // Do initial synchronization of actions in code and the database.
-  action_synchronize();
-}
